@@ -2,15 +2,12 @@ import {InputControl, NumberInputControl, SwitchControl} from "@/components/reac
 import {ChevronDownIcon, ChevronRightIcon, InfoOutlineIcon} from "@chakra-ui/icons"
 import {Box, Button, Flex, FormControl, FormErrorMessage, Grid, GridItem, Text} from "@chakra-ui/react"
 import {useErrorToast} from "hooks/useToast"
-import {get} from "lodash"
+import {compact, get} from "lodash"
 import {PriceBreak} from "ordercloud-javascript-sdk"
 import {useEffect, useState} from "react"
 import {Control, FieldValues, useFieldArray, useFormState, UseFormTrigger, useWatch} from "react-hook-form"
 import {validationSchema} from "../meta"
 import * as fieldNames from "./fieldNames"
-
-const formInputGap = 5
-const sectionGap = 10
 
 interface PriceBreakTableProps {
   control: Control<FieldValues, any>
@@ -23,7 +20,7 @@ const PriceBreakTable = ({control, trigger}: PriceBreakTableProps) => {
   })
   const {errors} = useFormState({control})
   const watchFields = useWatch({control, name: fieldNames.PRICE_BREAKS})
-  const error = get(errors, fieldNames.PRICE_BREAKS, "") as any
+  const errorMessage = getPricebreakErrorMessage(errors)
   const errorToast = useErrorToast()
 
   useEffect(() => {
@@ -34,13 +31,32 @@ const PriceBreakTable = ({control, trigger}: PriceBreakTableProps) => {
     remove(index)
   }
 
-  const handleAddPriceBreak = () => {
-    if (error?.message) {
-      errorToast({description: error.message})
+  const handleAddPriceBreak = async () => {
+    await trigger()
+    if (errorMessage) {
+      errorToast({description: errorMessage})
       return
     }
     const lastPriceBreak = watchFields[watchFields.length - 1] as PriceBreak
     append({Quantity: Number(lastPriceBreak.Quantity) + 1, Price: "", SalePrice: ""})
+  }
+
+  function getPricebreakErrorMessage(errors: any) {
+    const error = get(errors, fieldNames.PRICE_BREAKS, "") as any
+    if (error.message) {
+      // error on price breaks as a whole
+      return error.message
+    }
+    if (error.length) {
+      // get first error on an individual price break
+      const individualErrors = compact(error) as any[]
+      if (individualErrors.length) {
+        const firstError = individualErrors[0]
+        const keys = Object.keys(firstError)
+        return firstError[keys[0]].message
+      }
+    }
+    return ""
   }
 
   return (
@@ -49,7 +65,7 @@ const PriceBreakTable = ({control, trigger}: PriceBreakTableProps) => {
         Volume Pricing
       </Text>
       {fields.map((field, index) => (
-        <Flex key={field.id} gap={formInputGap} alignItems="end" flexWrap={{base: "wrap", lg: "nowrap"}}>
+        <Flex key={field.id} gap="formInputSpacing" alignItems="end" flexWrap={{base: "wrap", lg: "nowrap"}}>
           <NumberInputControl
             numberInputProps={{flexGrow: 1}}
             name={`${fieldNames.PRICE_BREAKS}.${index}.Quantity`}
@@ -73,7 +89,10 @@ const PriceBreakTable = ({control, trigger}: PriceBreakTableProps) => {
             leftAddon="$"
             validationSchema={validationSchema}
           />
-          {index !== 0 && (
+          {index === 0 ? (
+            // this feels very wrong
+            <Box minWidth="46px"></Box>
+          ) : (
             <Button variant="ghost" color="danger.500" onClick={() => handleDeletePriceBreak(index)}>
               Delete
             </Button>
@@ -84,9 +103,9 @@ const PriceBreakTable = ({control, trigger}: PriceBreakTableProps) => {
         <Text fontWeight="medium" color="brand.400" maxWidth="max-content" onClick={handleAddPriceBreak}>
           Add price break
         </Text>
-        <FormControl isInvalid={error?.message} maxWidth="max-content">
+        <FormControl isInvalid={errorMessage} maxWidth="max-content">
           <FormErrorMessage display="inline-block">
-            <InfoOutlineIcon mr={2} /> {error.message}
+            <InfoOutlineIcon mr={2} /> {errorMessage}
           </FormErrorMessage>
         </FormControl>
       </Flex>
@@ -97,14 +116,15 @@ const PriceBreakTable = ({control, trigger}: PriceBreakTableProps) => {
 interface PricingFormProps {
   control: Control<FieldValues, any>
   trigger: UseFormTrigger<any>
+  priceBreakCount: number
 }
-export function PricingForm({control, trigger}: PricingFormProps) {
-  const [showAdvancedPricing, setShowAdvancedPricing] = useState(false)
+export function PricingForm({control, trigger, priceBreakCount}: PricingFormProps) {
+  const [showAdvancedPricing, setShowAdvancedPricing] = useState(priceBreakCount > 1)
 
   return (
     <>
-      <Flex flexFlow="column" gap={sectionGap} maxWidth="1000px">
-        <Grid templateColumns={{base: "1fr", xl: "1fr 1fr"}} gap={formInputGap}>
+      <Flex flexDirection="column" gap="formSectionSpacing" maxWidth="container.lg">
+        <Grid templateColumns={{base: "1fr", xl: "1fr 1fr"}} gap="formInputSpacing">
           <GridItem>
             <InputControl
               name={`${fieldNames.PRICE_BREAKS}.${0}.Price`}
@@ -124,7 +144,7 @@ export function PricingForm({control, trigger}: PricingFormProps) {
             />
           </GridItem>
           <GridItem gridRowStart={{base: "unset", xl: 2}}>
-            <Grid gap={formInputGap} gridTemplateColumns={{base: "1fr", xl: "1fr 1fr"}}>
+            <Grid gap="formInputSpacing" gridTemplateColumns={{base: "1fr", xl: "1fr 1fr"}}>
               <GridItem>
                 <InputControl
                   name={fieldNames.SALE_START}
@@ -154,7 +174,7 @@ export function PricingForm({control, trigger}: PricingFormProps) {
           {showAdvancedPricing ? <ChevronDownIcon boxSize={6} /> : <ChevronRightIcon boxSize={6} />} Advanced Pricing
         </Text>
         {showAdvancedPricing && (
-          <Flex flexFlow="column" gap={sectionGap}>
+          <Flex flexDirection="column" gap="formSectionSpacing">
             <Box>
               <SwitchControl
                 switchProps={{size: "md"}}
@@ -172,7 +192,7 @@ export function PricingForm({control, trigger}: PricingFormProps) {
               <Text fontWeight="medium" marginBottom={3}>
                 Order Limitations
               </Text>
-              <Flex gap={formInputGap} flexWrap={{base: "wrap", lg: "nowrap"}}>
+              <Flex gap="formInputSpacing" flexWrap={{base: "wrap", lg: "nowrap"}}>
                 <InputControl
                   name={fieldNames.MIN_QUANTITY}
                   label="Minimum quantity"
