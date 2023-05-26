@@ -1,19 +1,27 @@
 import {ProductDetailTab} from "@/components/products/detail/ProductDetail"
+import { Console } from "console"
 import {useRouter} from "next/router"
-import {PriceSchedules, Products} from "ordercloud-javascript-sdk"
+import {PriceSchedules, ProductFacets, Products} from "ordercloud-javascript-sdk"
 import {useState, useEffect} from "react"
 import {IPriceSchedule} from "types/ordercloud/IPriceSchedule"
 import {IProduct} from "types/ordercloud/IProduct"
+import {IProductFacet} from "types/ordercloud/IProductFacet"
 
 export function useProductDetail() {
   const {isReady, query, push} = useRouter()
   const [product, setProduct] = useState(null as IProduct)
   const [defaultPriceSchedule, setDefaultPriceSchedule] = useState(null as IPriceSchedule)
+  const [facets, setFacets] = useState([] as IProductFacet[])
   const [showTabbedView, setShowTabbedView] = useState(true)
   const [loading, setLoading] = useState(true)
   const [initialTab, setInitialTab] = useState("Details" as ProductDetailTab)
 
   useEffect(() => {
+    (async () => {
+      const _facets = await ProductFacets.List<IProductFacet>({pageSize: 100})
+      setFacets(_facets.Items)
+    })()
+
     const getProduct = async () => {
       const _product = await Products.Get<IProduct>(query.productid.toString())
       if (_product?.DefaultPriceScheduleID) {
@@ -63,5 +71,5 @@ export function useProductDetail() {
     }
   }, [isReady, query, push])
 
-  return {product, defaultPriceSchedule, loading, showTabbedView, initialTab}
+  return {product, defaultPriceSchedule, facets, loading, showTabbedView, initialTab}
 }

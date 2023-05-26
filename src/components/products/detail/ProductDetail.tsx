@@ -46,6 +46,8 @@ import {ProductDetailTab} from "./ProductDetailTab"
 import {IPriceSchedule} from "types/ordercloud/IPriceSchedule"
 import {TbBarrierBlock, TbCactus, TbFileUpload} from "react-icons/tb"
 import schraTheme from "theme/theme"
+import {FacetsForm} from "./forms/FacetsForm/FacetsForm"
+import { IProductFacet } from "types/ordercloud/IProductFacet"
 
 export type ProductDetailTab = "Details" | "Pricing" | "Variants" | "Media" | "Facets" | "Customization" | "SEO"
 
@@ -64,12 +66,14 @@ interface ProductDetailProps {
   initialTab: ProductDetailTab
   product?: IProduct
   defaultPriceSchedule?: IPriceSchedule
+  facets?: IProductFacet[]
 }
 export default function ProductDetail({
   showTabbedView,
   initialTab,
   product,
-  defaultPriceSchedule = {} as IPriceSchedule
+  defaultPriceSchedule = {} as IPriceSchedule,
+  facets
 }: ProductDetailProps) {
   const router = useRouter()
   const successToast = useSuccessToast()
@@ -86,9 +90,27 @@ export default function ProductDetail({
   }
   const [viewVisibility, setViewVisibility] = useState(initialViewVisibility)
 
+  const createFormFacets = (facetList: IProductFacet[], facetsOnProduct: any) => {
+    const formattedFacets = facetList.map(facet => {
+      const { ID, Name, xp: { Options } } = facet;
+      const optionsWithValues = Options.map(option => ({
+        facetOptionName: option,
+        value: facetsOnProduct[ID] ? facetsOnProduct[ID].includes(option) : false
+      }));
+
+      return {
+        ID,
+        Name,
+        Options: optionsWithValues
+      };
+    });
+
+    return(formattedFacets)
+  }
+
   const initialValues = product
     ? withDefaultValuesFallback(
-        {Product: cloneDeep(product), DefaultPriceSchedule: cloneDeep(defaultPriceSchedule)},
+        {Product: cloneDeep(product), DefaultPriceSchedule: cloneDeep(defaultPriceSchedule), Facets: cloneDeep(createFormFacets(facets, product?.xp?.Facets))},
         defaultValues
       )
     : makeNestedObject(defaultValues)
@@ -104,14 +126,39 @@ export default function ProductDetail({
     mode: "onBlur"
   })
 
+  const generateUpdatedFacets = (facets) => {
+    const updatedFacetsOnProduct = {};
+  
+    facets.forEach((facet) => {
+      const { ID, Options } = facet;
+      const filteredOptions = Options.filter((option) => option.value === true);
+  
+      if (filteredOptions.length > 0) {
+        updatedFacetsOnProduct[ID] = filteredOptions.map((option) => option.facetOptionName);
+      } else {
+        updatedFacetsOnProduct[ID] = [];
+      }
+    });
+  
+    return updatedFacetsOnProduct;
+  };
+
   const onSubmit = async (fields) => {
+    const updatedFacetsOnProduct = generateUpdatedFacets(fields.Facets);
+
     // create/update product
     if (isCreatingNew) {
-      product = await Products.Create<IProduct>({...fields.Product, DefaultPriceScheduleID: defaultPriceSchedule.ID})
+      product = await Products.Create<IProduct>({...fields.Product, DefaultPriceScheduleID: defaultPriceSchedule.ID, 
+        xp: {
+          Facets: updatedFacetsOnProduct
+        }})
     } else {
       const productDiff = getObjectDiff(product, fields.Product)
       product = await Products.Patch<IProduct>(product.ID, {
-        ...productDiff
+        ...productDiff,
+        xp: {
+          Facets: updatedFacetsOnProduct
+        }
       })
     }
 
@@ -294,26 +341,7 @@ export default function ProductDetail({
               {viewVisibility.Facets && (
                 <TabPanel p={0} mt={6}>
                   <Card w="100%">
-                    <CardHeader display="flex" alignItems={"center"}>
-                      <Button variant="outline" colorScheme="accent" ml="auto">
-                        Add Facet
-                      </Button>
-                    </CardHeader>
-                    <CardBody>
-                      <Box
-                        p={6}
-                        display="flex"
-                        flexDirection={"column"}
-                        alignItems={"center"}
-                        justifyContent={"center"}
-                        minH={"xs"}
-                      >
-                        <Icon as={TbCactus} fontSize={"5xl"} strokeWidth={"2px"} color="accent.500" />
-                        <Heading colorScheme="secondary" fontSize="xl">
-                          This product has no facets
-                        </Heading>
-                      </Box>
-                    </CardBody>
+                    <FacetsForm control={control} trigger={trigger} facetList={facets} productFacets={product?.xp?.Facets}/>
                   </Card>
                 </TabPanel>
               )}
