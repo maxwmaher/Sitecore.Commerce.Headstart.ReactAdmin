@@ -74,7 +74,7 @@ const ParkingCard = () => {
           </Text>
         </Box>
 
-        <Box flex="1" p={4}>
+        <VStack alignItems="flex-start" flex="1" p={4}>
           <Text fontSize="xl" fontWeight="bold">
             20 CHF
           </Text>
@@ -93,10 +93,10 @@ const ParkingCard = () => {
           <Text fontSize="sm" mt={3}>
             To be paid at the automatic cash registers (estimate)
           </Text>
-          <Button colorScheme="blue" mt={4}>
+          <Button colorScheme="blue" mt="auto" size="sm" w="full" rounded="none">
             BOOK
           </Button>
-        </Box>
+        </VStack>
       </CardBody>
       <CardFooter as={VStack} alignItems="flex-start">
         <Button
