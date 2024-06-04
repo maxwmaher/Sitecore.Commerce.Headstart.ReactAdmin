@@ -139,7 +139,7 @@ export function OrderDetail({
                 />
               </CardBody>
             </Card>
-            {/* {isAdmin && (
+            {isAdmin && (
               <Card width="full">
                 <CardHeader>
                   <Heading size="md">Payment</Heading>
@@ -152,7 +152,7 @@ export function OrderDetail({
                   />
                 </CardBody>
               </Card>
-            )} */}
+            )}
             {shipments?.length > 0 && (
               <Card width="full">
                 <CardHeader>
