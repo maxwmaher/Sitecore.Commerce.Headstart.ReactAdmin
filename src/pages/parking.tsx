@@ -1,21 +1,6 @@
 import ParkingCard from "@/components/shared/ParkingCard"
-import {CheckCircleIcon, InfoIcon} from "@chakra-ui/icons"
-import {
-  Box,
-  Button,
-  Card,
-  Container,
-  Flex,
-  FormControl,
-  FormLabel,
-  Icon,
-  Input,
-  Stack,
-  Text,
-  VStack
-} from "@chakra-ui/react"
+import {Box, Container, FormControl, FormLabel, Input, Stack, VStack} from "@chakra-ui/react"
 import {useState} from "react"
-import {FaClock, FaGem, FaLock, FaParking, FaPlane, FaStar, FaWalking} from "react-icons/fa"
 
 const Parking = () => {
   const [entryDate, setEntryDate] = useState("")
@@ -31,7 +16,7 @@ const Parking = () => {
   }
 
   return (
-    <Container maxW="full">
+    <Container maxW="container.xl">
       <Box as="form" onSubmit={handleSubmit} mt={8} p={4} borderWidth={1} borderRadius="lg">
         <Stack spacing={4} direction="row">
           <FormControl id="entryDate" isRequired>
@@ -55,7 +40,7 @@ const Parking = () => {
           </FormControl>
 
           <FormControl id="quantity" isRequired>
-            <FormLabel>Quantity</FormLabel>
+            <FormLabel>Number of cars</FormLabel>
             <Input type="number" value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value))} min={1} />
           </FormControl>
         </Stack>
